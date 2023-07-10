@@ -1,62 +1,45 @@
 #![allow(incomplete_features)]
-#![feature(generic_const_exprs, inherent_associated_types)]
 
-extern crate raylib;
+extern crate glfw;
+extern crate gl;
 
-use raylib::{prelude::{RaylibDraw, Color, RaylibShaderModeExt, Rectangle, Vector2, TraceLogLevel}, shaders::RaylibShader};
-use transform4d::Mat5;
+use glfw::{Action, Context, Key};
+use shader::Shader;
 
-use crate::transform4d::Vec4;
-
-mod transform4d;
-mod objects;
-
-use objects::ObjectsManager;
+mod shader;
 
 fn main() {
-    //let c = std::f64::consts::PI / 180.0;
-    //let angles = [90.0 * c, 90.0 * c, 90.0 * c, 90.0 * c, 90.0 * c, 90.0 * c];
-    
-    //let pos = nalgebra::vector![1.0, 0.0, 0.0, 0.0, 1.0];
-    //println!("{}", transform * pos);
+    let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
 
-    raylib::core::logging::set_trace_log(TraceLogLevel::LOG_DEBUG);
+    let (mut window, events) = glfw
+        .create_window(800, 600, "4D Viewer", glfw::WindowMode::Windowed)
+        .expect("Failed to create window");
 
-    let (mut rl, thread) = raylib::init()
-        .size(640, 480)
-        .title("Hello, World")
-        .resizable()
-        .build();
+    window.make_current();
+    window.set_key_polling(true);
 
-    rl.set_target_fps(60);
-    
+    gl::load_with(|symbol| window.get_proc_address(symbol) as *const _);
 
-    let origin = Vector2 { x: 0.0, y: 0.0 };
-    let mut shader = rl.load_shader(&thread, Some("shaders/main.vert"), Some("shaders/main.frag")).unwrap();
-    let time_loc = shader.get_shader_location("u_time");
-    let screen_size_loc = shader.get_shader_location("u_screen_size");
+    let shader_vert = Shader::from_file("shaders/base.vert".into(), gl::VERTEX_SHADER).unwrap();
+    let shader_frag = Shader::from_file("shaders/base.frag".into(), gl::FRAGMENT_SHADER).unwrap();
 
-    
-    //gl::load_with(|name| rl.get_proc_address(s) as *const _);
-    //let objects_manages = ObjectsManager::new();
-    //let objects = default_objects();
+    // Loop until the user closes the window
+    while !window.should_close() {
+        // Swap front and back buffers
+        window.swap_buffers();
 
-    while !rl.window_should_close() {
-        let width = rl.get_screen_width() as f32;
-        let height = rl.get_screen_height() as f32;
-        let rectangle = Rectangle { x: 0.0, y: 0.0, width, height };
         
 
-        let time = rl.get_time();
-        shader.set_shader_value(time_loc, time as f32);
-        shader.set_shader_value(screen_size_loc, Vector2::new(width, height));
-
-        let mut d = rl.begin_drawing(&thread);
-         
-        d.clear_background(Color::WHITE);
-        d.draw_text("Hello, world!", 12, 12, 20, Color::BLACK);
-
-        let mut s = d.begin_shader_mode(&shader);
-        s.draw_rectangle_pro(rectangle, origin, 0.0, Color::YELLOW);
+        // Poll for and process events
+        glfw.poll_events();
+        for (_, event) in glfw::flush_messages(&events) {
+            println!("{:?}", event);
+            match event {
+                glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
+                    window.set_should_close(true)
+                },
+                _ => {},
+            }
+        }
     }
 }
