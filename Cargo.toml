@@ -1,0 +1,15 @@
+[package]
+name = "camera4d"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+gl = "0.14.0"
+nalgebra = "0.32.3"
+# iter_fixed = "0.3.1"
+# num-traits = "0.2.15"
+raylib = "3.7.0"
+# rulinalg = "0.4.2"
+
