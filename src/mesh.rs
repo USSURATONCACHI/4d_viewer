@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 extern crate gl;
 
 use crate::gl::types::{GLuint, GLenum, GLboolean, GLsizei, GLvoid, GLint};

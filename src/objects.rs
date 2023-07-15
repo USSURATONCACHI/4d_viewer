@@ -11,8 +11,6 @@ pub enum ObjectType {
     Sphere = 1
 }
 
-use ObjectType::*;
-#[repr(C)]
 pub struct Object {
     pub obj_type: ObjectType,
     pub transform: Mat5,
@@ -34,16 +32,24 @@ impl GpuObjectsHandle {
     }
 
     pub fn write_objects(&mut self, objects: &[Object]) {
-        let data_to_write: Box<[(ObjectType, [f32; 25])]> = objects.iter()
-            .map(|obj| (
-                obj.obj_type, 
-                transform4d::matrix_to_array(obj.transform.try_inverse().unwrap())
-            ))
+        #[allow(dead_code)]
+        struct BufObject {
+            obj_type: ObjectType,
+            transform: [f32; 25],
+            inverse: [f32; 25],
+        }
+
+        let data_to_write: Box<[BufObject]> = objects.iter()
+            .map(|obj| BufObject {
+                obj_type:   obj.obj_type,
+                transform:  transform4d::matrix_to_array(obj.transform.clone()),
+                inverse:    transform4d::matrix_to_array(obj.transform.try_inverse().unwrap())
+            })
             .collect();
 
         self.bind();
         unsafe {
-            let size = data_to_write.len() * std::mem::size_of::<(ObjectType, [f32; 25])>();
+            let size = data_to_write.len() * std::mem::size_of::<BufObject>();
             gl::BufferData(gl::SHADER_STORAGE_BUFFER, size as GLsizeiptr, data_to_write.as_ptr() as *const _, gl::STATIC_READ);
         }
         self.unbind();
@@ -63,6 +69,7 @@ impl GpuObjectsHandle {
         }
     }
 
+    #[allow(dead_code)]
     pub fn ubo(&self) -> GLuint {
         self.ssbo
     }
@@ -76,27 +83,8 @@ impl GpuObjectsHandle {
 
 impl Drop for GpuObjectsHandle {
     fn drop(&mut self) {
-        println!("Drop!");
         unsafe {
             gl::DeleteBuffers(1, &self.ssbo);
         }
     }
-}
-
-fn default_objects() -> Vec<Object> {
-    vec![
-        Object {
-            obj_type: Cube,
-            transform: transform4d::full_transform(
-                nalgebra::vector![0.0, 0.0, 0.0, 0.0],
-                nalgebra::vector![2.0, 1.0, 1.0, 1.0],
-                nalgebra::vector![30.0 * std::f64::consts::PI / 180.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-            )
-        },
-
-        Object {
-            obj_type: Sphere,
-            transform: transform4d::shift(nalgebra::vector![0.0, 0.0, 1.0, 0.0])
-        }
-    ]
 }

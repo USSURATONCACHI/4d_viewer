@@ -1,5 +1,7 @@
 use std::{ffi::{CString, CStr}, path::PathBuf};
 
+
+
 extern crate gl;
 
 pub struct Shader(gl::types::GLuint);
@@ -65,6 +67,11 @@ impl Drop for Shader {
             gl::DeleteShader(self.0);
         }
     }
+}
+
+
+pub trait Uniformable {
+    unsafe fn set_uniform(self, location: i32);
 }
 
 
@@ -158,6 +165,19 @@ impl Program {
     pub fn id(&self) -> gl::types::GLuint {
         self.0
     }
+
+    pub fn uniform<T: Uniformable>(&self, name: &str, val: T) {
+        self.use_program();
+        let location = gl_get_uniform_location(self, name);
+        unsafe { 
+            val.set_uniform(location); 
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn location(&self, name: &str) -> i32 {
+        gl_get_uniform_location(self, name)
+    } 
 }
 
 impl Drop for Program {
@@ -165,5 +185,58 @@ impl Drop for Program {
         unsafe {
             gl::DeleteProgram(self.0);
         }
+    }
+}
+
+macro_rules! uniformable {
+    ($type:ty, $function_name:expr) => {
+        impl Uniformable for $type {
+            unsafe fn set_uniform(self, location: i32) {
+                $function_name (location, self)
+            }
+        }
+    };
+
+    ($type:ty, $function_name:expr, 2) => {
+        impl Uniformable for $type {
+            unsafe fn set_uniform(self, location: i32) {
+                $function_name (location, self.0, self.1)
+            }
+        }
+    };
+    
+    ($type:ty, $function_name:expr, 3) => {
+        impl Uniformable for $type {
+            unsafe fn set_uniform(self, location: i32) {
+                $function_name (location, self.0, self.1, self.2)
+            }
+        }
+    };
+
+    
+    ($type:ty, $function_name:expr, 4) => {
+        impl Uniformable for $type {
+            unsafe fn set_uniform(self, location: i32) {
+                $function_name (location, self.0, self.1, self.2, self.3)
+            }
+        }
+    };
+}
+
+uniformable!(f32, gl::Uniform1f);
+uniformable!((f32, f32), gl::Uniform2f, 2);
+uniformable!((f32, f32, f32), gl::Uniform3f, 3);
+uniformable!((f32, f32, f32, f32), gl::Uniform4f, 4);
+
+uniformable!(u32, gl::Uniform1ui);
+uniformable!((u32, u32), gl::Uniform2ui, 2);
+uniformable!((u32, u32, u32), gl::Uniform3ui, 3);
+uniformable!((u32, u32, u32, u32), gl::Uniform4ui, 4);
+
+
+fn gl_get_uniform_location(program: &Program, name: &str) -> i32 {
+    unsafe {
+        let c_str = std::ffi::CString::new(name).unwrap();
+        gl::GetUniformLocation(program.id(), c_str.as_ptr())
     }
 }

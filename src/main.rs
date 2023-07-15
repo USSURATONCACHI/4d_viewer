@@ -3,12 +3,10 @@
 extern crate glfw;
 extern crate gl;
 
-use std::ffi::{CString, CStr};
-
 use glfw::{Action, Context, Key, WindowEvent, Window};
 use mesh::Mesh;
 use objects::{GpuObjectsHandle, Object};
-use shader::{Program};
+use shader::Program;
 
 mod shader;
 mod mesh;
@@ -57,7 +55,9 @@ fn main() {
 struct App {
     program: Program,
     mesh: Mesh,
-    objects: GpuObjectsHandle,
+    _objects: GpuObjectsHandle,
+
+    start_time_secs: f64,
 }
 
 impl App {
@@ -68,13 +68,14 @@ impl App {
         obj_handle.bind_buffer_base(0);
         
         let program = Program::from_files_auto("shaders/base").unwrap();
-        let location = gl_get_uniform_location(&program, "objects_count");
-        unsafe { gl::Uniform1ui(location, objects.len() as u32); }
+        program.uniform("u_objects_count", objects.len() as u32);
 
         App {
             program,
             mesh: square_mesh(),
-            objects: obj_handle,
+            _objects: obj_handle,
+
+            start_time_secs: current_time(),
         }
     }
 
@@ -85,10 +86,8 @@ impl App {
     pub fn render(&mut self, window: &mut Window) {
         let win_size = window.get_size();
         let aspect_ratio = win_size.0 as f32 / win_size.1 as f32;
-        let location = gl_get_uniform_location(&self.program, "aspect_ratio");
-        unsafe {
-            gl::Uniform1f(location, aspect_ratio);
-        }
+        self.program.uniform("u_aspect_ratio", aspect_ratio);
+        self.program.uniform("u_time", self.time_elapsed() as f32);
 
         self.program.use_program();
         self.mesh.bind();
@@ -108,13 +107,15 @@ impl App {
     pub fn should_exit(&self) -> bool {
         false
     }
+
+    pub fn time_elapsed(&self) -> f64 {
+        current_time() - self.start_time_secs
+    }
 }
 
-fn gl_get_uniform_location(program: &Program, name: &str) -> i32 {
-    unsafe {
-        let c_str = std::ffi::CString::new(name).unwrap();
-        gl::GetUniformLocation(program.id(), c_str.as_ptr())
-    }
+
+fn current_time() -> f64 {
+    (std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as f64) / 1000.0
 }
 
 fn default_objects() -> Vec<Object> {
@@ -130,6 +131,27 @@ fn default_objects() -> Vec<Object> {
         },
     ]
 }
+
+/*
+
+fn default_objects() -> Vec<Object> {
+    vec![
+        Object {
+            obj_type: Cube,
+            transform: transform4d::full_transform(
+                nalgebra::vector![0.0, 0.0, 0.0, 0.0],
+                nalgebra::vector![2.0, 1.0, 1.0, 1.0],
+                nalgebra::vector![30.0 * std::f64::consts::PI / 180.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+            )
+        },
+
+        Object {
+            obj_type: Sphere,
+            transform: transform4d::shift(nalgebra::vector![0.0, 0.0, 1.0, 0.0])
+        }
+    ]
+}
+*/
 
 fn square_mesh() -> Mesh {
     let mut mesh = Mesh::new();
