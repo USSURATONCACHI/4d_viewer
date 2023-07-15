@@ -20,8 +20,12 @@ struct Object {
     mat5 inverse;
 };
 
-layout(std430, binding = 0) buffer layoutObjects {
+layout(std430, binding = 0) buffer buf1 {
     Object b_objects[];
+};
+
+layout(std430, binding = 1) buffer buf2 {
+    mat5 camera_matrix;
 };
 
 uniform uint u_objects_count;
@@ -48,9 +52,30 @@ void main() {
     vec3 norm_f_pos = f_pos / 2.0;
     out_color = vec4(0.0, 0.0, 0.0, 1.0);
 
-    vec4 main_ray_pos = vec4(0.0, norm_f_pos.x * CAM_WIDTH, norm_f_pos.y * CAM_WIDTH / u_aspect_ratio, 0.0);
-    vec4 main_ray_dir = vec4(1.0, norm_f_pos.x / 10.0, norm_f_pos.y / 10.0, 0.0);
+    vec4 main_ray_pos = vec4(
+        -5.0, 
+        norm_f_pos.x * CAM_WIDTH + 1.0, 
+        norm_f_pos.y * CAM_WIDTH / u_aspect_ratio + camera_matrix.data[4] + 1.5,
+        0.0
+    );
+    vec4 main_ray_dir = vec4(1.0, norm_f_pos.x / 2.0, norm_f_pos.y / u_aspect_ratio / 2.0, 0.0);
     main_ray_dir /= length(main_ray_dir);
+
+    vec5 main_ray_pos5;
+    main_ray_pos5.data[0] = main_ray_pos.x;
+    main_ray_pos5.data[1] = main_ray_pos.y;
+    main_ray_pos5.data[2] = main_ray_pos.z;
+    main_ray_pos5.data[3] = main_ray_pos.w;
+    main_ray_pos5.data[4] = 1.0;
+
+    /*main_ray_pos5 = vec5_mul_mat5(main_ray_pos5, camera_matrix);
+    main_ray_pos = vec4(
+        main_ray_pos5.data[0],
+        main_ray_pos5.data[1],
+        main_ray_pos5.data[2],
+        main_ray_pos5.data[3]
+    );*/
+    //main_ray_pos /= main_ray_pos5.data[4];
 
     vec4 obj_ray_poses[MAX_OBJECTS];
     vec4 obj_ray_dirs[MAX_OBJECTS];
@@ -91,12 +116,14 @@ void main() {
         obj_ray_dirs[i] /= length(obj_ray_dirs[i]);
     }
 
+    float total_distance = 0.0;
     for (int i = 0; i < 20; i++) {
         for (int obj = 0; obj < u_objects_count; obj++) {
             float dist = obj_dist(obj_ray_poses[obj], b_objects[obj].obj_type);
+            total_distance += dist;
             
             if (dist <= 0.0) {
-                out_color = vec4(1.0);
+                out_color = vec4(0.0, 1.0 / total_distance * float(u_objects_count) + 0.4, 0.0, 1.0);
                 break;
             }
 
@@ -141,12 +168,12 @@ float obj_dist(vec4 pos, uint obj_type) {
 }
 
 float sdBox(vec4 pos) {
-  vec4 q = abs(pos) - vec4(1.0);
+  vec4 q = abs(pos) - vec4(0.5);
   return length(max(q,0.0)) + min(max4(q.x,q.y,q.z, q.w),0.0);
 }
 
 float sdSphere(vec4 pos) {
-  return length(pos) - 1.0;
+  return length(pos) - 0.5;
 }
 
 float max4(float a, float b, float c, float d) {

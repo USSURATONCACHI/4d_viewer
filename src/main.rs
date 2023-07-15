@@ -3,15 +3,20 @@
 extern crate glfw;
 extern crate gl;
 
+use std::collections::HashMap;
+
 use glfw::{Action, Context, Key, WindowEvent, Window};
 use mesh::Mesh;
 use objects::{GpuObjectsHandle, Object};
 use shader::Program;
+use transform4d::{Vec4, Vec6};
+use util::OpenglBuffer;
 
 mod shader;
 mod mesh;
 mod transform4d;
 mod objects;
+mod util;
 
 fn main() {
     // ====== GLFW, OpenGL and window initialization
@@ -31,7 +36,9 @@ fn main() {
     let mut last_size = window.get_size();
 
     // ====== Main loop
+    let mut last_frame = current_time();
     while !window.should_close() && !app.should_exit() {
+        let cur_frame = current_time();
         window.swap_buffers();
 
         let cur_window_size = window.get_size();
@@ -47,8 +54,9 @@ fn main() {
         glfw::flush_messages(&events)
             .for_each(|(_, event)| app.handle_input(event, &mut window));
 
-        app.update(0.0);
+        app.update(cur_frame - last_frame);
         app.render(&mut window);
+        last_frame = cur_frame;
     }
 }
 
@@ -58,17 +66,22 @@ struct App {
     _objects: GpuObjectsHandle,
 
     start_time_secs: f64,
+    camera_buf: OpenglBuffer,
+    camera_pos: Vec4,
+    camera_rot: Vec6,
+
+    keys_pressed: HashMap<glfw::Key, bool>,
 }
 
 impl App {
     pub fn new() -> Self {
         let mut obj_handle = GpuObjectsHandle::new();
-        let objects = default_objects();
-        obj_handle.write_objects(&objects);
         obj_handle.bind_buffer_base(0);
         
-        let program = Program::from_files_auto("shaders/base").unwrap();
-        program.uniform("u_objects_count", objects.len() as u32);
+        let program = match Program::from_files_auto("shaders/base") {
+            Ok(program) => program,
+            Err(e) => panic!("{e}"),
+        };
 
         App {
             program,
@@ -76,11 +89,42 @@ impl App {
             _objects: obj_handle,
 
             start_time_secs: current_time(),
+            camera_buf: OpenglBuffer::new(gl::SHADER_STORAGE_BUFFER),
+            camera_pos: nalgebra::vector![0.0, 0.0, 0.0, 0.0],
+            camera_rot: nalgebra::vector![0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+
+            keys_pressed: HashMap::new(),
         }
     }
 
-    pub fn update(&mut self, _dt: f64) {
+    pub fn update(&mut self, dt: f64) {
+        if self.is_key_pressed(Key::Space) {
+            self.camera_pos[3] += 1.0 * dt;
+        }
+
+        let camera_matrix = transform4d::full_transform(
+            self.camera_pos, 
+            nalgebra::vector![1.0, 1.0, 1.0, 1.0], 
+            self.camera_rot
+        );
+        let camera_arr = transform4d::matrix_to_array(camera_matrix);
+
+        self.camera_buf.write_data(&camera_arr, 1, gl::STATIC_READ);
+        self.camera_buf.bind_buffer_base(1);
+        println!("Camera pos: {:?}", self.camera_pos);
+
+        
+        let objects = default_objects();
+        self._objects.write_objects(&objects);
+        self.program.uniform("u_objects_count", objects.len() as u32);
         // Nothing here yet
+    }
+
+    pub fn is_key_pressed(&self, key: Key) -> bool {
+        match self.keys_pressed.get(&key) {
+            Some(true) => true,
+            _ => false
+        }
     }
 
     pub fn render(&mut self, window: &mut Window) {
@@ -100,6 +144,15 @@ impl App {
             glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
                 window.set_should_close(true)
             },
+
+            glfw::WindowEvent::Key(key, _, Action::Press, _) => {
+                self.keys_pressed.insert(key, true);
+            } 
+            
+            glfw::WindowEvent::Key(key, _, Action::Release, _) => {
+                self.keys_pressed.insert(key, false);
+            }
+            
             _ => {},
         }
     }
@@ -119,10 +172,13 @@ fn current_time() -> f64 {
 }
 
 fn default_objects() -> Vec<Object> {
+    let time = current_time();
+
     vec![
         Object {
             obj_type: objects::ObjectType::Cube,
-            transform: transform4d::shift(nalgebra::vector![1.0, 1.0, 1.0, 0.0]),
+            transform: transform4d::shift(nalgebra::vector![1.0, 1.0, 1.0, 0.0]) *
+                transform4d::rotation_full(nalgebra::vector![time, 0.0, 0.0, 0.0, 0.0, 0.0]),
         },
         
         Object {

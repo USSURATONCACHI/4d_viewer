@@ -44,7 +44,12 @@ impl Shader {
                 gl::GetShaderInfoLog(id, len, std::ptr::null_mut(),
                     error.as_ptr() as *mut gl::types::GLchar);
             }
-            return Err(error.to_string_lossy().into_owned());
+            let mut error = error.to_string_lossy()
+                .into_owned()
+                .replace("\\n", "\nnnnn")
+                .replace("\\0", "[END]");
+            
+            return Err(error);
         } 
 
         Ok(Shader(id))
