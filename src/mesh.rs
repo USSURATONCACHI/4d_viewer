@@ -25,16 +25,11 @@ impl Mesh {
 
         unsafe {
             gl::GenBuffers(1, &mut this.vbo);
-            //gl::GenBuffers(1, &mut this.ebo);
+            gl::GenBuffers(1, &mut this.ebo);
             gl::GenVertexArrays(1, &mut this.vao);
-
-            gl::BindVertexArray(this.vao);
-            gl::BindBuffer(gl::ARRAY_BUFFER, this.vbo);
-            //gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, this.ebo);
-
-            gl::BindVertexArray(0);
-            gl::BindBuffer(gl::ARRAY_BUFFER, 0);
-            //gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, 0);
+        
+            this.bind();
+            this.unbind();
         }
 
         this
@@ -42,13 +37,18 @@ impl Mesh {
 
     pub fn bind(&self) {
         unsafe {
+            // For some whatever reason VAO does not automatically bind VBO and EBO.
             gl::BindVertexArray(self.vao);
+            gl::BindBuffer(gl::ARRAY_BUFFER, self.vbo);
+            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, self.ebo);
         }
     }
 
     pub fn unbind(&self) {
         unsafe {
             gl::BindVertexArray(0);
+            gl::BindBuffer(gl::ARRAY_BUFFER, 0); 
+            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, 0);
         }
     }
 
@@ -67,19 +67,19 @@ impl Mesh {
         self.indices_count = indices_count as i32;
         unsafe {
             gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, self.ebo);
-            //println!("EBO: {} \t| size: {size}", self.ebo);
             gl::BufferData(gl::ELEMENT_ARRAY_BUFFER, size as gl::types::GLsizeiptr, data.as_ptr() as *const _, usage);
             gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, 0);
         }
     }
+
+    pub fn set_indices_u32_tuples(&mut self, data: &[(u32, u32, u32)], usage: GLenum) {
+        self.set_indices(data, data.len() * 3, usage, gl::UNSIGNED_INT);
+    }
     
     pub fn draw(&self) {
-        self.bind();
-        //println!("Indices count is: {}", self.indices_count);
         unsafe {
             gl::DrawElements(gl::TRIANGLES, self.indices_count(), self.index_type, std::ptr::null());
         }
-        self.unbind();
     }
 
     pub fn indices_count(&self) -> GLsizei {

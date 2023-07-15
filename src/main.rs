@@ -5,7 +5,7 @@ extern crate gl;
 
 use glfw::{Action, Context, Key};
 use mesh::Mesh;
-use shader::{Program};
+use shader::{Shader, Program};
 
 mod shader;
 mod mesh;
@@ -34,14 +34,14 @@ fn main() {
         (0.5, -0.5, 0.0),
     ];
     mesh.set_vertex_data(&vertices, gl::STATIC_DRAW);
-
-    //let indices = vec![(0, 1, 2)];
-    //mesh.set_indices(&indices, 3, gl::STATIC_DRAW, gl::UNSIGNED_INT);
+    mesh.set_indices_u32_tuples(&[(0, 1, 2)], gl::STATIC_DRAW);
 
     // Loop until the user closes the window
     while !window.should_close() {
         // Swap front and back buffers
         window.swap_buffers();
+
+        
 
         // Poll for and process events
         glfw.poll_events();
@@ -57,11 +57,6 @@ fn main() {
 
         program.use_program();
         mesh.bind();
-        unsafe {
-            //gl::BindBuffer(gl::ARRAY_BUFFER, mesh.vbo());
-            //gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, mesh.ebo());       
-            gl::DrawArrays(gl::TRIANGLES, 0, 3); 
-        }
-        //mesh.draw();
+        mesh.draw();
     }
 }
