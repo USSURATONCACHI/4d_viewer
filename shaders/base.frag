@@ -1,6 +1,6 @@
 #version 330 core
 
-in vec2 f_pos;
+in vec3 f_pos;
 
 out vec4 f_color;
 

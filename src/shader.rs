@@ -71,6 +71,43 @@ impl Drop for Shader {
 pub struct Program(gl::types::GLuint);
 
 impl Program {
+    pub fn from_files_auto(shader_name: &str) -> Result<Program, String> {
+        const POSSIBLE_EXTS: [(&str, gl::types::GLenum); 4] = [
+            (".vert", gl::VERTEX_SHADER),
+            (".geom", gl::GEOMETRY_SHADER),
+            (".frag", gl::FRAGMENT_SHADER),
+            (".comp", gl::COMPUTE_SHADER),
+        ];
+
+        let files: Box<[_]> = POSSIBLE_EXTS.iter()
+            .map(|(ext, shader_type)| (
+                format!("{shader_name}{ext}"),
+                shader_type.clone()
+            ))
+            .filter(|(path, _)| PathBuf::from(path).is_file())
+            .collect();
+
+        let files_ref: Box<[_]> = files.iter()
+            .map(|(path, stype)| (path.as_str(), stype.clone()))
+            .collect();
+
+        Self::from_files(&files_ref)
+    }
+
+    pub fn from_files(files: &[(&str, gl::types::GLenum)]) -> Result<Program, String> {
+        let shaders: Result<Box<[_]>, _> = files
+            .iter()
+            .map(
+                |(path, shader_type)| 
+                    Shader::from_file(path.into(), *shader_type)
+                        .map_err(|err| format!("File {path} :: {err}"))    
+            )
+            .collect();
+
+        let shaders = shaders?;
+        Self::from_shaders(&shaders)
+    }
+
     pub fn from_shaders(shaders: &[Shader]) -> Result<Program, String> {
 		let program_id = unsafe { gl::CreateProgram() };
 
@@ -111,6 +148,12 @@ impl Program {
         unsafe { gl::UseProgram(program_id); }
         Ok(Program(program_id))
 	}
+
+    pub fn use_program(&self) {
+        unsafe {
+            gl::UseProgram(self.0);
+        }
+    }
 
     pub fn id(&self) -> gl::types::GLuint {
         self.0
