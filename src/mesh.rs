@@ -99,6 +99,36 @@ impl Mesh {
         //self.unbind();
     }
 
+    // [(element_count, element_size, element_type)]
+    pub fn bind_consecutive_attribs(&mut self, start_id: u32, attribs: &[(usize, usize, GLenum)])
+    {
+        self.bind();
+        let mut pointer = 0;
+        let mut index = start_id;
+        
+        let stride: usize = attribs.iter()
+            .map(|(count, size, _)| *count * *size)
+            .sum();
+
+        for (element_count, element_size, element_type) in attribs {
+            unsafe {
+                gl::EnableVertexAttribArray(index);
+                gl::VertexAttribPointer(
+                    index, 
+                    *element_count as GLsizei, 
+                    *element_type, 
+                    gl::FALSE, 
+                    stride as GLint, 
+                    pointer as *const _
+                );
+
+            }
+
+            index += 1;
+            pointer += *element_count * *element_size;
+        }
+    }
+
     pub fn vao(&self) -> gl::types::GLuint {
         self.vao
     }

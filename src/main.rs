@@ -24,9 +24,11 @@ fn main() {
 
     let program = Program::from_files_auto("shaders/base").unwrap();
     let mut mesh = Mesh::new();
-    mesh.bind_vertex_attribs([
-        (0, 3, gl::FLOAT, gl::FALSE, 6 * std::mem::size_of::<f32>() as i32, 0 as *const _),
-        (1, 3, gl::FLOAT, gl::FALSE, 6 * std::mem::size_of::<f32>() as i32, (3 * std::mem::size_of::<f32>()) as *const _)
+    
+    let float_size = std::mem::size_of::<f32>();
+    mesh.bind_consecutive_attribs(0, &[
+        (3, float_size, gl::FLOAT),
+        (3, float_size, gl::FLOAT),
     ]);
 
     let vertices: Vec<(f32, f32, f32, f32, f32, f32)> = vec![
