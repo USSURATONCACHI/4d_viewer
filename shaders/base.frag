@@ -6,5 +6,6 @@ in vec3 f_color;
 out vec4 out_color;
 
 void main() {
-    out_color = vec4(f_color, 1.0);
+    vec3 c = f_pos / 2.0 + 0.5;
+    out_color = vec4(c.xy, 0.0, 1.0);
 }

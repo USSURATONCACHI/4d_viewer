@@ -3,14 +3,15 @@
 extern crate glfw;
 extern crate gl;
 
-use glfw::{Action, Context, Key};
+use glfw::{Action, Context, Key, WindowEvent, Window};
 use mesh::Mesh;
-use shader::{Shader, Program};
+use shader::{Program};
 
 mod shader;
 mod mesh;
 
 fn main() {
+    // ====== GLFW, OpenGL and window initialization
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
 
     let (mut window, events) = glfw
@@ -22,7 +23,82 @@ fn main() {
 
     gl::load_with(|symbol| window.get_proc_address(symbol) as *const _);
 
-    let program = Program::from_files_auto("shaders/base").unwrap();
+    // ====== Program initialization
+    let mut app = App::new();
+
+    // ====== Main loop
+    while !window.should_close() && !app.should_exit() {
+        window.swap_buffers();
+
+        glfw.poll_events();
+        glfw::flush_messages(&events)
+            .for_each(|(_, event)| app.handle_input(event, &mut window));
+
+        app.update(0.0);
+        app.render();
+    }
+}
+
+struct App {
+    program: Program,
+    mesh: Mesh,
+}
+
+impl App {
+    pub fn new() -> Self {
+        App {
+            program: Program::from_files_auto("shaders/base").unwrap(),
+            mesh: square_mesh(),
+        }
+    }
+
+    pub fn update(&mut self, dt: f64) {
+
+    }
+
+    pub fn render(&mut self) {
+        self.program.use_program();
+        self.mesh.bind();
+        self.mesh.draw();
+    }
+
+    pub fn handle_input(&mut self, event: WindowEvent, window: &mut Window) {
+        println!("{:?}", event);
+        match event {
+            glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
+                window.set_should_close(true)
+            },
+            _ => {},
+        }
+    }
+
+    pub fn should_exit(&self) -> bool {
+        false
+    }
+}
+
+fn square_mesh() -> Mesh {
+    let mut mesh = Mesh::new();
+
+    mesh.bind_consecutive_attribs(0, &[
+        (3, std::mem::size_of::<f32>(), gl::FLOAT),
+    ]);
+
+    let vertices: Vec<(f32, f32, f32)> = vec![
+        (-1.0, -1.0, 0.0),
+        (1.0, -1.0, 0.0),
+        (1.0, 1.0, 0.0),
+        (-1.0, 1.0, 0.0),
+    ];
+    let indices = [(0, 1, 2), (0, 3, 2)];
+
+    mesh.set_vertex_data(&vertices, gl::STATIC_DRAW);
+    mesh.set_indices_u32_tuples(&indices, gl::STATIC_DRAW);
+
+    mesh
+}
+
+fn triangle_mesh() -> Mesh {
     let mut mesh = Mesh::new();
     
     let float_size = std::mem::size_of::<f32>();
@@ -39,27 +115,5 @@ fn main() {
     mesh.set_vertex_data(&vertices, gl::STATIC_DRAW);
     mesh.set_indices_u32_tuples(&[(0, 1, 2)], gl::STATIC_DRAW);
 
-    // Loop until the user closes the window
-    while !window.should_close() {
-        // Swap front and back buffers
-        window.swap_buffers();
-
-        
-
-        // Poll for and process events
-        glfw.poll_events();
-        for (_, event) in glfw::flush_messages(&events) {
-            println!("{:?}", event);
-            match event {
-                glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
-                    window.set_should_close(true)
-                },
-                _ => {},
-            }
-        }
-
-        program.use_program();
-        mesh.bind();
-        mesh.draw();
-    }
+    mesh
 }
