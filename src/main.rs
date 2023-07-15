@@ -25,13 +25,14 @@ fn main() {
     let program = Program::from_files_auto("shaders/base").unwrap();
     let mut mesh = Mesh::new();
     mesh.bind_vertex_attribs([
-        (0, 3, gl::FLOAT, gl::FALSE, 3 * std::mem::size_of::<f32>() as i32, std::ptr::null() as *const _)
+        (0, 3, gl::FLOAT, gl::FALSE, 6 * std::mem::size_of::<f32>() as i32, 0 as *const _),
+        (1, 3, gl::FLOAT, gl::FALSE, 6 * std::mem::size_of::<f32>() as i32, (3 * std::mem::size_of::<f32>()) as *const _)
     ]);
 
-    let vertices: Vec<(f32, f32, f32)> = vec![
-        (-0.5, -0.5, 0.0),
-        (0.0, 0.5, 0.0),
-        (0.5, -0.5, 0.0),
+    let vertices: Vec<(f32, f32, f32, f32, f32, f32)> = vec![
+        (-0.5, -0.5, 0.0, 1.0, 0.0, 0.0),
+        (0.0, 0.5, 0.0, 0.0, 1.0, 0.0),
+        (0.5, -0.5, 0.0, 0.0, 0.0, 1.0),
     ];
     mesh.set_vertex_data(&vertices, gl::STATIC_DRAW);
     mesh.set_indices_u32_tuples(&[(0, 1, 2)], gl::STATIC_DRAW);
