@@ -25,10 +25,20 @@ fn main() {
 
     // ====== Program initialization
     let mut app = App::new();
+    let mut last_size = window.get_size();
 
     // ====== Main loop
     while !window.should_close() && !app.should_exit() {
         window.swap_buffers();
+
+        let cur_window_size = window.get_size();
+        if cur_window_size != last_size {
+            last_size = cur_window_size;
+            
+            unsafe {
+                gl::Viewport(0, 0, cur_window_size.0, cur_window_size.1);
+            }
+        }
 
         glfw.poll_events();
         glfw::flush_messages(&events)
