@@ -1,6 +1,6 @@
 extern crate gl;
 
-use gl::types::GLuint;
+use gl::types::{GLuint, GLsizeiptr};
 
 use crate::transform4d::{self, Mat5};
 
@@ -12,47 +12,73 @@ pub enum ObjectType {
 }
 
 use ObjectType::*;
+#[repr(C)]
 pub struct Object {
-    obj_type: ObjectType,
-    transform: Mat5,
+    pub obj_type: ObjectType,
+    pub transform: Mat5,
 }
 
-pub struct ObjectsManager {
-    objects_ubo: GLuint,
+pub struct GpuObjectsHandle {
+    ssbo: GLuint
 }
 
-impl ObjectsManager {
+impl GpuObjectsHandle {
     pub fn new() -> Self {
-        let mut ubo = u32::MAX;
+        let mut ssbo = 0;
 
-        println!("Trying to gen ubo!");
-        unsafe { gl::GenBuffers(1, &mut ubo); }
-        println!("Got ubo: {ubo}");
+        unsafe { gl::GenBuffers(1, &mut ssbo); }
         
-        ObjectsManager { 
-            objects_ubo: ubo
+        GpuObjectsHandle { 
+            ssbo
         }
     }
 
     pub fn write_objects(&mut self, objects: &[Object]) {
-        let data_to_write: Box<[_]> = objects.iter()
+        let data_to_write: Box<[(ObjectType, [f32; 25])]> = objects.iter()
             .map(|obj| (
                 obj.obj_type, 
-                obj.transform.try_inverse().unwrap()
-            ))
-            .map(|(obj_type, matrix)| (
-                obj_type, 
-                transform4d::matrix_to_array(matrix)
+                transform4d::matrix_to_array(obj.transform.try_inverse().unwrap())
             ))
             .collect();
-    }  
+
+        self.bind();
+        unsafe {
+            let size = data_to_write.len() * std::mem::size_of::<(ObjectType, [f32; 25])>();
+            gl::BufferData(gl::SHADER_STORAGE_BUFFER, size as GLsizeiptr, data_to_write.as_ptr() as *const _, gl::STATIC_READ);
+        }
+        self.unbind();
+    }
+
+    pub fn bind_buffer_base(&self, slot: u32) {
+        self.bind();
+        unsafe {
+            gl::BindBufferBase(gl::SHADER_STORAGE_BUFFER, slot, self.ssbo);
+        }
+        self.unbind();
+    }
+
+    pub fn bind(&self) {
+        unsafe {
+            gl::BindBuffer(gl::SHADER_STORAGE_BUFFER, self.ssbo);
+        }
+    }
+
+    pub fn ubo(&self) -> GLuint {
+        self.ssbo
+    }
+
+    pub fn unbind(&self) {
+        unsafe {
+            gl::BindBuffer(gl::SHADER_STORAGE_BUFFER, 0);
+        }
+    }
 }
 
-impl Drop for ObjectsManager {
+impl Drop for GpuObjectsHandle {
     fn drop(&mut self) {
         println!("Drop!");
         unsafe {
-            gl::DeleteBuffers(1, &self.objects_ubo);
+            gl::DeleteBuffers(1, &self.ssbo);
         }
     }
 }

@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 extern crate nalgebra;
 
 use nalgebra::matrix;
@@ -87,11 +89,11 @@ pub fn full_transform(pos: Vec4, size: Vec4, rotation: Vec6) -> Mat5 {
     scale(size)
 }
 
-pub fn matrix_to_array(mat: Mat5) -> [f64; 5*5] {
+pub fn matrix_to_array(mat: Mat5) -> [f32; 5*5] {
     std::array::from_fn(|i| {
         let row = i / 5;
         let col = i % 5;
 
-        mat[(row, col)]
+        mat[(row, col)] as f32
     })
 }
