@@ -8,11 +8,10 @@ use std::collections::HashMap;
 use glfw::{Action, Context, Key, WindowEvent, Window};
 use mesh::Mesh;
 use objects::{GpuObjectsHandle, Object};
-use shader::Program;
+use shader_loader::{program::Program, preprocessor::FileLoader};
 use transform4d::{Vec4, Vec6};
 use util::OpenglBuffer;
 
-mod shader;
 mod mesh;
 mod transform4d;
 mod objects;
@@ -55,7 +54,12 @@ fn main() {
             .for_each(|(_, event)| app.handle_input(event, &mut window));
 
         app.update(cur_frame - last_frame);
+
+        let start = current_time();
         app.render(&mut window);
+        unsafe { gl::Finish(); }
+        println!("Render took: {} ms", (current_time() - start) * 1000.0);
+        
         last_frame = cur_frame;
     }
 }
@@ -73,15 +77,24 @@ struct App {
     keys_pressed: HashMap<glfw::Key, bool>,
 }
 
+fn load_program(vert: &str, frag: &str) -> Program {
+    match Program::from_loader(&FileLoader::new(), &[
+        (frag, gl::FRAGMENT_SHADER),
+        (vert, gl::VERTEX_SHADER)
+    ]) {
+        Ok(program) => program,
+        Err(error) => {
+            panic!("\n{}", error);
+        }
+    }
+}
+
 impl App {
     pub fn new() -> Self {
-        let mut obj_handle = GpuObjectsHandle::new();
+        let obj_handle = GpuObjectsHandle::new();
         obj_handle.bind_buffer_base(0);
         
-        let program = match Program::from_files_auto("shaders/base") {
-            Ok(program) => program,
-            Err(e) => panic!("{e}"),
-        };
+        let program = load_program("shaders/base.vert", "shaders/base.frag");
 
         App {
             program,
@@ -111,7 +124,7 @@ impl App {
 
         self.camera_buf.write_data(&camera_arr, 1, gl::STATIC_READ);
         self.camera_buf.bind_buffer_base(1);
-        println!("Camera pos: {:?}", self.camera_pos);
+        //println!("Camera pos: {:?}", self.camera_pos);
 
         
         let objects = default_objects();
@@ -172,19 +185,25 @@ fn current_time() -> f64 {
 }
 
 fn default_objects() -> Vec<Object> {
-    let time = current_time();
+    let time = current_time() / 2.0;
 
     vec![
         Object {
             obj_type: objects::ObjectType::Cube,
-            transform: transform4d::shift(nalgebra::vector![1.0, 1.0, 1.0, 0.0]) *
-                transform4d::rotation_full(nalgebra::vector![time, 0.0, 0.0, 0.0, 0.0, 0.0]),
+            transform: transform4d::shift(nalgebra::vector![2.0, -1.0, 0.0, 0.0]) *
+                transform4d::rotation_full(nalgebra::vector![1.0, 1.0, 1.0, 1.0, 0.0, 0.0] * time),
         },
         
         Object {
+            obj_type: objects::ObjectType::CubeFrame,
+            transform: transform4d::shift(nalgebra::vector![2.0, 1.0, 0.0, 0.0]) *
+                transform4d::rotation_full(nalgebra::vector![1.0, 1.0, 1.0, 1.0, 0.0, 0.0] * time),
+        },
+        
+        /*Object {
             obj_type: objects::ObjectType::Sphere,
             transform: transform4d::shift(nalgebra::vector![1.0, 1.0, 2.0, 0.0]),
-        },
+        },*/
     ]
 }
 

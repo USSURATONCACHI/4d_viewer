@@ -6,9 +6,11 @@ use crate::transform4d::{self, Mat5};
 
 #[repr(u32)]
 #[derive(Debug, Clone, Copy)]
+#[allow(dead_code)]
 pub enum ObjectType {
     Cube = 0,
-    Sphere = 1
+    Sphere = 1,
+    CubeFrame = 2,
 }
 
 pub struct Object {
@@ -33,6 +35,7 @@ impl GpuObjectsHandle {
 
     pub fn write_objects(&mut self, objects: &[Object]) {
         #[allow(dead_code)]
+        #[repr(packed)]
         struct BufObject {
             obj_type: ObjectType,
             transform: [f32; 25],
