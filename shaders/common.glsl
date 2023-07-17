@@ -7,8 +7,9 @@
 
 // Buffers and uniforms
 layout(std430, binding = 0) buffer buf1 { Object b_objects[]; };
-layout(std430, binding = 1) buffer buf2 { mat5 camera_matrix; };
+layout(std430, binding = 1) buffer buf2 { mat5 b_camera_matrix; };
 
 uniform uint u_objects_count;
 uniform float u_aspect_ratio;
 uniform float u_time;
+uniform int u_object_id;

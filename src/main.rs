@@ -112,7 +112,31 @@ impl App {
 
     pub fn update(&mut self, dt: f64) {
         if self.is_key_pressed(Key::Space) {
+            self.camera_pos[2] += 1.0 * dt;
+        }
+        if self.is_key_pressed(Key::LeftShift) {
+            self.camera_pos[2] -= 1.0 * dt;
+        }
+
+        if self.is_key_pressed(Key::W) {
+            self.camera_pos[0] += 1.0 * dt;
+        }
+        if self.is_key_pressed(Key::S) {
+            self.camera_pos[0] -= 1.0 * dt;
+        }
+        
+        if self.is_key_pressed(Key::D) {
+            self.camera_pos[1] += 1.0 * dt;
+        }
+        if self.is_key_pressed(Key::A) {
+            self.camera_pos[1] -= 1.0 * dt;
+        }
+
+        if self.is_key_pressed(Key::R) {
             self.camera_pos[3] += 1.0 * dt;
+        }
+        if self.is_key_pressed(Key::F) {
+            self.camera_pos[3] -= 1.0 * dt;
         }
 
         let camera_matrix = transform4d::full_transform(
@@ -122,7 +146,7 @@ impl App {
         );
         let camera_arr = transform4d::matrix_to_array(camera_matrix);
 
-        self.camera_buf.write_data(&camera_arr, 1, gl::STATIC_READ);
+        self.camera_buf.write_data(&camera_arr, std::mem::size_of::<[f32;25]>(), gl::STATIC_READ);
         self.camera_buf.bind_buffer_base(1);
         //println!("Camera pos: {:?}", self.camera_pos);
 
@@ -148,6 +172,15 @@ impl App {
 
         self.program.use_program();
         self.mesh.bind();
+
+        unsafe {
+            gl::ClearColor(0.1, 0.2, 0.4, 1.0);
+            gl::Clear(gl::COLOR_BUFFER_BIT);
+        }
+        self.program.uniform("u_object_id", 0i32);
+        self.mesh.draw();
+        
+        self.program.uniform("u_object_id", 1i32);
         self.mesh.draw();
     }
 

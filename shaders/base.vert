@@ -7,23 +7,25 @@
 layout (location = 0) in vec3 v_pos;
 
 #define OUT
-#include_once ray_poses_dirs.glsl
+out vec4 f_ray_pos;
+out vec4 f_ray_dir;
+
 
 out vec3 f_pos;
 
-void calculate_objects_rays();
+void calculate_objects_ray();
 
 void main() {
     gl_Position = vec4(v_pos, 1.0);
     f_pos = v_pos;
-    calculate_objects_rays();
+    calculate_objects_ray();
 }
 
 
 #define FOV 90.0
 #define FOV_COEF tan(FOV / 2.0)
 
-void calculate_objects_rays() {
+void calculate_objects_ray() {
     vec3 normalized_pos = v_pos / 2.0;
 
     // ==================================== Camera offset |
@@ -44,19 +46,18 @@ void calculate_objects_rays() {
     // In order not to multiply mat5 by vec5 for each object each iteration,
     // we instead multiply inverses of objects (matrices) by camera to get
     // virtual cameras for each object. It can be done only once.
-    for (int i = 0; i < u_objects_count; i++) {
-        vec5 ray_pos;
-        ray_pos.xyzw = main_ray_pos;
-        ray_pos.v = 1.0;
+    vec5 ray_pos;
+    ray_pos.xyzw = main_ray_pos;
+    ray_pos.v = 1.0;
 
-        ray_pos = vec5_mul_mat5(ray_pos, b_objects[i].inverse);
-        set_ray_pos(i, ray_pos.xyzw / ray_pos.v);
-        
-        vec5 ray_dir;
-        ray_dir.xyzw = main_ray_dir;
-        ray_dir.v = 0.0;
+    ray_pos = vec5_mul_mat5(ray_pos, b_camera_matrix);
+    ray_pos = vec5_mul_mat5(ray_pos, b_objects[u_object_id].inverse);
+    f_ray_pos = ray_pos.xyzw / ray_pos.v;
 
-        ray_dir = vec5_mul_mat5(ray_dir, b_objects[i].inverse);
-        set_ray_dir(i, ray_dir.xyzw); // / length(ray_dir.xyzw);
-    }
+    vec5 ray_dir;
+    ray_dir.xyzw = main_ray_dir;
+    ray_dir.v = 0.0;
+
+    ray_dir = vec5_mul_mat5(ray_dir, b_objects[u_object_id].inverse);
+    f_ray_dir = ray_dir.xyzw;
 }
