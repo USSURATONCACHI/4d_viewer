@@ -1,5 +1,7 @@
 use gl::types::{GLuint, GLenum, GLsizeiptr};
 
+use crate::transform4d::{Mat5, self};
+
 pub struct OpenglBuffer {
     ubo: GLuint,
     buf_type: GLenum,
@@ -59,5 +61,16 @@ impl Drop for OpenglBuffer {
         unsafe {
             gl::DeleteBuffers(1, &self.ubo);
         }
+    }
+}
+
+pub fn current_time() -> f64 {
+    (std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as f64) / 1000.0
+}
+
+pub fn uniform_mat5(location: i32, matrix: &Mat5) {
+    let array = transform4d::matrix_to_array(matrix);
+    unsafe {
+        gl::Uniform1fv(location, array.len() as i32, array.as_ptr() as *const _);
     }
 }

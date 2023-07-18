@@ -10,6 +10,5 @@ gl = "0.14.0"
 glfw = "0.52.0"
 lazy_static = "1.4.0"
 nalgebra = "0.32.3"
-path-dedot = "3.1.0"
-regex = "1.9.1"
+obj-rs = "0.7.1"
 shader_loader = { git = "https://github.com/USSURATONCACHI/shader_loader.git" }

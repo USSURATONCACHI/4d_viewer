@@ -9,17 +9,16 @@ pub type Vec6 = nalgebra::base::Vector6<f64>;
 pub type Vec5 = nalgebra::base::Vector5<f64>;
 pub type Vec4 = nalgebra::base::Vector4<f64>;
 
-/*
-fn scale(scale: Vec4) -> Mat5 {
-    matrix![
-        1.0,  0.0,  0.0,  0.0,  0.0;
-        0.0,  1.0,  0.0,  0.0,  0.0;
-        0.0,  0.0,  1.0,  0.0,  0.0;
-        0.0,  0.0,  0.0,  1.0,  0.0;
-        0.0,  0.0,  0.0,  0.0,  1.0;
+/// Makes perspective matrix (perspective for -Z axis, since opengl "camera" looks in -Z direction)
+pub fn perspective_matrix(fov: f64, aspect_ratio: f64, near: f64, far: f64) -> Mat5 {
+    nalgebra::matrix![
+        1.0 / aspect_ratio / (fov / 2.0).tan(), 0.0,                        0.0,                                0.0,    0.0;
+        0.0,                                    1.0 / (fov / 2.0).tan(),    0.0,                                0.0,    0.0;
+        0.0,                                    0.0,                       -(far + near) / (far - near),        0.0,   -2.0 * far * near / (far - near);
+        0.0,                                    0.0,                        0.0,                                1.0,    0.0;
+        0.0,                                    0.0,                       -1.0,                                0.0,    0.0;
     ]
 }
-*/
 
 pub fn scale(scale: Vec4) -> Mat5 {
     matrix![
@@ -83,13 +82,31 @@ pub fn rotation_full(angles: Vec6) -> Mat5 {
     rotation_single(angles[0], X, Y)
 }
 
+/// Constucts matrix of 4D rotation in 6 planes (opposite order)
+/// 
+/// 4 axes: x, y, z, w
+/// 
+/// 6 rotation planes: zw, yw, yz, xw, xz, xy
+pub fn rotation_full_inv(angles: Vec6) -> Mat5 {
+    const X: usize = 0;
+    const Y: usize = 1;
+    const Z: usize = 2;
+    const W: usize = 3;
+    rotation_single(angles[0], X, Y) *
+    rotation_single(angles[1], X, Z) *
+    rotation_single(angles[2], X, W) * 
+    rotation_single(angles[3], Y, Z) * 
+    rotation_single(angles[4], Y, W) * 
+    rotation_single(angles[5], Z, W) 
+}
+
 pub fn full_transform(pos: Vec4, size: Vec4, rotation: Vec6) -> Mat5 {
     shift(pos) * 
     rotation_full(rotation) *
     scale(size)
 }
 
-pub fn matrix_to_array(mat: Mat5) -> [f32; 5*5] {
+pub fn matrix_to_array(mat: &Mat5) -> [f32; 5*5] {
     std::array::from_fn(|i| {
         let row = i / 5;
         let col = i % 5;
