@@ -10,13 +10,13 @@ pub type Vec5 = nalgebra::base::Vector5<f64>;
 pub type Vec4 = nalgebra::base::Vector4<f64>;
 
 /// Makes perspective matrix (perspective for -Z axis, since opengl "camera" looks in -Z direction)
-pub fn perspective_matrix(fov: f64, aspect_ratio: f64, near: f64, far: f64) -> Mat5 {
+pub fn perspective_matrix(fov: f64, aspect_ratio: f64, near: f64, far: f64, w_perspective: f64) -> Mat5 {
     nalgebra::matrix![
         1.0 / aspect_ratio / (fov / 2.0).tan(), 0.0,                        0.0,                                0.0,    0.0;
         0.0,                                    1.0 / (fov / 2.0).tan(),    0.0,                                0.0,    0.0;
         0.0,                                    0.0,                       -(far + near) / (far - near),        0.0,   -2.0 * far * near / (far - near);
         0.0,                                    0.0,                        0.0,                                1.0,    0.0;
-        0.0,                                    0.0,                       -1.0,                                0.0,    0.0;
+        0.0,                                    0.0,                       -1.0,                                w_perspective,    0.0;
     ]
 }
 

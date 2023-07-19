@@ -99,6 +99,7 @@ struct App {
     last_mouse_pos: Option<(f64, f64)>,
 
     keys_pressed: HashMap<glfw::Key, bool>,
+    w_perspective: bool,
 }
 
 fn load_program(files: &[(&str, GLenum)]) -> Program {
@@ -163,6 +164,7 @@ impl App {
 
             keys_pressed: HashMap::new(),
             last_mouse_pos: None,
+            w_perspective: false,
         }
     }
 
@@ -206,7 +208,7 @@ impl App {
 
         // CAMERA
         let camera: Mat5 = // Quite ugly tbh
-            transform4d::perspective_matrix(90.0, aspect_ratio_f64 , 0.01, 100.0) * 
+            transform4d::perspective_matrix(90.0, aspect_ratio_f64 , 0.01, 100.0, if self.w_perspective { 1.0 } else { 0.0 }) * 
             OPENGL_TO_CAMERA.deref() * 
             self.camera_matrix().try_inverse().unwrap();
 
@@ -248,6 +250,10 @@ impl App {
 
             glfw::WindowEvent::Key(key, _, Action::Press, _) => {
                 self.keys_pressed.insert(key, true);
+
+                if key == Key::T {
+                    self.w_perspective = !self.w_perspective;
+                }
             } 
             
             glfw::WindowEvent::Key(key, _, Action::Release, _) => {
